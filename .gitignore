@@ -1,0 +1,10 @@
+# ignore all audio and video files
+*.mp3
+*.webm
+*.m4a
+
+# ignore the automated database backups
+backups/
+
+# ignore Python cache files
+__pycache__/
