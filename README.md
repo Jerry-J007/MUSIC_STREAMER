@@ -21,4 +21,11 @@ mysql-connector-python , pygame , yt-dlp
 ### 4. Download FFmpeg for Windows using this Link
 https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
 
-### 5. Create the local database architecture in MySql workbench using the schema provided in 
+### 5. Create the local database architecture in MySql workbench using the schema provided in Database_Schema.png
+
+### 6.Change your local password in the following files
+authenticator.py , backup.py , music_streamer.py
+
+### 7.Boot UP the server.py file
+
+### 8.Open a  new terminal and boot up the terminal_UI.py file
