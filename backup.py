@@ -23,7 +23,7 @@ def run_backup_routine():
         
         # command to backup MySQL
         #///////////////////////////////////////////////////////////////////////////////////////////
-        command = f'"{mysql_path}" -u root -pEnter Your Password Here music_streamer > "{filepath}"'
+        command = f'"{mysql_path}" -u root -p"PASSWORD GOES HERE" music_streamer > "{filepath}"'
         #///////////////////////////////////////////////////////////////////////////////////////////
         try:
            
@@ -34,7 +34,7 @@ def run_backup_routine():
             
        
        
-        time.sleep(24) #every 24 hours
+        time.sleep(43200) #every 12 hours
 
 def start_background_backups():
     

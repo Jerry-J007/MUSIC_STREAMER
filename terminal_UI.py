@@ -119,12 +119,13 @@ def main():
     # player menu
     while True:
         draw_header(f"WELCOME, {username.upper()}")
-        print("1. ▶️  Download & Play Stream")
+        print("1. ▶️  Download & Play Stream(All songs)")
         print("2. 🌐  Add New Song (Paste YouTube Link)")
-        print("3. 🚪  Log Out And Exit")
+        print("3. 📂  My Playlists")
+        print("4. 🚪  Log Out And Exit")
         print("-" * 40)
         
-        choice = input("Enter choice (1 to 3 only): ")
+        choice = input("Enter choice (1 to 4 only): ")
         
         if choice == '1':
             print("\n📥 Fetching library from server...")
@@ -182,8 +183,115 @@ def main():
                 print(f"❌ Failed: {msg}")
                 
             input("\nPress Enter to return to menu...")
-                
         elif choice == '3':
+            while True:
+                draw_header("MY PLAYLISTS")
+                print("1. ➕ Create New Playlist")
+                print("2. 🎧 View & Stream from Playlists")
+                print("3. 📥 Add a Song to a Playlist")
+                print("4. 🔙 Return to Main Menu")
+                print("-" * 40)
+                
+                pl_choice = input("Enter choice (1-4): ")
+                
+                # create new playlist
+                if pl_choice == '1':
+                    name = input("\nEnter new playlist name: ").strip()
+                    success, msg = backend.create_playlist(session_id, name)
+                    print(f"\n{ '✅' if success else '❌'} {msg}")
+                    input("\nPress Enter to continue...")
+                
+                # open playlist
+                elif pl_choice == '2':
+                    success, playlists = backend.view_playlists(session_id)
+                    if not success or not playlists:
+                        print("\n❌ You have no playlists. Create one first!")
+                        input("\nPress Enter to return...")
+                        continue
+                        
+                    draw_header("YOUR PLAYLISTS")
+                    for i, pl in enumerate(playlists):
+                        print(f"{i + 1}. 📂 {pl['name']}")
+                    print("-" * 40)
+                    
+                    try:
+                        p_idx = int(input("Select playlist number (0 to cancel): "))
+                        if 1 <= p_idx <= len(playlists):
+                            selected_pl = playlists[p_idx - 1]
+                            
+                            # Fetch the actual songs inside this playlist
+                            s_success, songs = backend.view_playlist_tracks(session_id, selected_pl['id'])
+                            
+                            if not s_success or not songs:
+                                print(f"\n❌ '{selected_pl['name']}' is empty! Add songs to it first.")
+                                input("\nPress Enter to return...")
+                                continue
+                                
+                            draw_header(f"PLAYLIST: {selected_pl['name'].upper()}")
+                            for j, song in enumerate(songs):
+                                clean_name = song.replace(".mp3", "").replace("_", " ")
+                                print(f"{j + 1}. 🎵 {clean_name}")
+                            print("-" * 40)
+                            
+                            s_idx = int(input("Select song to stream (0 to cancel): "))
+                            if 1 <= s_idx <= len(songs):
+                                chosen_file = songs[s_idx - 1]
+                                print("\n📥 Contacting server...")
+                                stream_success, msg = backend.download_stream(session_id, chosen_file)
+                                if stream_success:
+                                    player_controls()
+                                else:
+                                    print(f"\n❌ Stream failed: {msg}")
+                    except ValueError:
+                        print("\n❌ Invalid input.")
+                    input("\nPress Enter to return...")
+                
+                # add new song to existing playlist
+                elif pl_choice == '3':
+                    # we show all available songs
+                    success, songs = backend.get_song_list()
+                    if not success or not songs:
+                        print("\n❌ No songs in the Global Jukebox!")
+                        input("\nPress Enter...")
+                        continue
+                        
+                    draw_header("SELECT SONG TO ADD")
+                    for i, song in enumerate(songs):
+                        clean_name = song.replace(".mp3", "").replace("_", " ")
+                        print(f"{i + 1}. 🎵 {clean_name}")
+                        
+                    try:
+                        s_idx = int(input("\nSelect song number: "))
+                        if 1 <= s_idx <= len(songs):
+                            chosen_file = songs[s_idx - 1]
+                            
+                            #we show all playlists
+                            p_success, playlists = backend.view_playlists(session_id)
+                            if not p_success or not playlists:
+                                print("\n❌ You have no playlists to add this to.")
+                                input("\nPress Enter...")
+                                continue
+                                
+                            draw_header("SELECT DESTINATION PLAYLIST")
+                            for i, pl in enumerate(playlists):
+                                print(f"{i + 1}. 📂 {pl['name']}")
+                                
+                            p_idx = int(input("\nSelect playlist number: "))
+                            if 1 <= p_idx <= len(playlists):
+                                selected_pl = playlists[p_idx - 1]
+                                add_success, msg = backend.add_to_playlist(selected_pl['id'], chosen_file)
+                                print(f"\n{ '✅' if add_success else '❌'} {msg}")
+                     
+                    except ValueError:
+                        print("\n❌ Invalid input.")
+                    input("\nPress Enter to return...")
+                
+                
+                elif pl_choice=="4":
+                    break
+                    
+                    
+        elif choice == '4':
             print("\nGoodbye.Music is the universal language of mankink 👋")
             backend.disconnect()
             break

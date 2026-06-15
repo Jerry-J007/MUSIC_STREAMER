@@ -14,9 +14,10 @@ PORT = 54321        # random big digit
 # A global dictionary to store everyone data
 # Format: { "session_id_string": UserState_Object }
 class UserState:
-    def __init__(self, username, session_id):
+    def __init__(self, username, session_id,db_user_id):
         self.username = username
         self.session_id = session_id
+        self.db_user_id = db_user_id
         self.current_track = None
         self.playback_position = 0  # we can track the exact byte we left off
 active_sessions = {}
@@ -119,12 +120,12 @@ def handle_client(connection,address):
                     password = load.get("password")
             
                     # returns true or false from the authenticator
-                    is_valid = authenticator.login_user(username, password)
+                    is_valid,db_user_id = authenticator.login_user(username, password)
             
                     if is_valid:
                         failed_logins[ip_address] = 0
                         id=str(uuid.uuid4())
-                        active_sessions[id] = UserState(username, id)
+                        active_sessions[id] = UserState(username, id,db_user_id)
                         response = {"status": "success", "message": "Login successful.Ready to stream.","id":id}
                     else:
                         failed_logins[ip_address] = failed_logins.get(ip_address, 0) + 1
@@ -226,7 +227,102 @@ def handle_client(connection,address):
                     
                     response = {"status": "success", "songs": available_songs}
                     connection.sendall(json.dumps(response).encode())
+                
+                elif load.get("action") == "create_playlist":
+                    playlist_name = load.get("name")
+                    session_id = load.get("id")
+                    user_id = active_sessions[session_id].db_user_id
+                    
+                    db = authenticator.get_connection()
+                    cursor = db.cursor()
+                    try:
+                        cursor.execute("INSERT INTO Playlists (user_id, name) VALUES (%s, %s)", (user_id, playlist_name))
+                        db.commit()
+                        response = {"status": "success", "message": f"Playlist '{playlist_name}' created!"}
+                    except Exception as e:
+                        response = {"status": "error", "message": str(e)}
+                    finally:
+                        cursor.close()
+                        db.close()
+                    connection.sendall(json.dumps(response).encode())
 
+                elif load.get("action") == "view_playlists":
+                    session_id = load.get("id")
+                    user_id = active_sessions[session_id].db_user_id
+                    
+                    db = authenticator.get_connection()
+                    cursor = db.cursor()
+                    try:
+                        cursor.execute("SELECT playlist_id, name FROM Playlists WHERE user_id = %s", (user_id,))
+                        # Fetch all rows and format them as a list of dictionaries so JSON can send it easily
+                        playlists = [{"id": row[0], "name": row[1]} for row in cursor.fetchall()]
+                        response = {"status": "success", "playlists": playlists}
+                    except Exception as e:
+                        response = {"status": "error", "message": str(e)}
+                    finally:
+                        cursor.close()
+                        db.close()
+                    connection.sendall(json.dumps(response).encode())
+
+                elif load.get("action") == "add_to_playlist":
+                    playlist_id = load.get("playlist_id")
+                    filename = load.get("filename")
+                    
+                    db = authenticator.get_connection()
+                    cursor = db.cursor()
+                    try:
+                        cursor.execute("INSERT INTO Playlist_Tracks (playlist_id, filename) VALUES (%s, %s)", (playlist_id, filename))
+                        db.commit()
+                        response = {"status": "success", "message": "Song added to playlist!"}
+                    except Exception as e:
+                        # duplicate entry code for my sql
+                        if "1062" in str(e):
+                            response = {"status": "error", "message": "Song is already in this playlist!"}
+                        else:
+                            response = {"status": "error", "message": str(e)}
+                    finally:
+                        cursor.close()
+                        db.close()
+                    connection.sendall(json.dumps(response).encode())
+
+                elif load.get("action") == "view_playlist_tracks":
+                    playlist_id = load.get("playlist_id")
+                    session_id = load.get("id")
+                    
+                    db = authenticator.get_connection()
+                    cursor = db.cursor()
+                    try:
+                        if session_id not in active_sessions:
+                            response = {"status": "error", "message": "Session expired. Please restart your client and log in again."}
+                        else:
+                            user_id = active_sessions[session_id].db_user_id
+                            
+                            db = authenticator.get_connection()
+                            cursor = db.cursor()
+                       
+                         # We ask the Junction Table (pt) for the filename, but we JOIN it with the 
+                         # Playlists table (p) to verify this playlist actually belongs to this user_id!
+                            query = """
+                                SELECT pt.filename 
+                                FROM Playlist_Tracks pt 
+                                JOIN Playlists p ON pt.playlist_id = p.playlist_id 
+                                WHERE pt.playlist_id = %s AND p.user_id = %s
+                            """
+                            cursor.execute(query, (playlist_id, user_id))
+                        
+                        # Grab the first item from every tuple returned
+                            songs = [row[0] for row in cursor.fetchall()]
+                        
+                        # We hide the client downloaded 
+                            if "downloaded_song.mp3" in songs:
+                                songs.remove("downloaded_song.mp3")
+                            
+                            response = {"status": "success", "songs": songs}
+                            cursor.close()
+                            db.close()
+                    except Exception as e:
+                        response = {"status": "error", "message": str(e)}
+                    connection.sendall(json.dumps(response).encode())
     except Exception as err:
         print(f"❌ERROR {err}")
 

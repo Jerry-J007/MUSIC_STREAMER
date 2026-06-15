@@ -7,7 +7,7 @@ def get_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="Enter Your Password Here", 
+        password="PASSWORD GOES HERE", 
         database="music_streamer"
     )
 
@@ -46,24 +46,31 @@ def login_user(username, password):
     cursor= db.cursor()
     
     input_hashed =hashlib.sha256(password.encode()).hexdigest()
+    if not db:
+        return False, None
     
     try:
-        query = "SELECT password_hashed FROM Users WHERE username = %s"
+        query = "SELECT user_id, password_hashed FROM Users WHERE username = %s"
         cursor.execute(query, (username,))
         result = cursor.fetchone() # Fetches the first matching row
         
         if result is None:
             print("❌ Username not found.")
-            return False
+            return False,None
             
-        stored_hash = result[0]#result will be a tuple,only the 0th index will be our required hashed password
+        stored_user_id = result[0]
+        stored_hash = result[1]#result will be a tuple,only the 0th index will be our required hashed password
         
         if input_hashed == stored_hash:
             print(f"✅ Welcome back, {username}! Login successful.")
-            return True
+            return True,stored_user_id
         else:
             print("❌ Incorrect password.")
-            return False
+            return False,None
+    
+    except Exception as e:
+        print(f"❌ Database error during login: {e}")
+        return False, None
             
     finally:
         cursor.close()

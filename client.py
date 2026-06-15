@@ -120,3 +120,27 @@ class Music_Client:
         if reply.get("status") == "success":
             return True, reply.get("songs")
         return False, []
+    
+    def create_playlist(self, session_id, name):
+        load_list = {"action": "create_playlist", "id": session_id, "name": name}
+        self.client_socket.sendall(json.dumps(load_list).encode())
+        reply = json.loads(self.client_socket.recv(1024).decode())
+        return reply.get("status") == "success", reply.get("message")
+
+    def view_playlists(self, session_id):
+        load_listview = {"action": "view_playlists", "id": session_id}
+        self.client_socket.sendall(json.dumps(load_listview).encode())
+        reply = json.loads(self.client_socket.recv(1024).decode())
+        return reply.get("status") == "success", reply.get("playlists", [])
+
+    def add_to_playlist(self, playlist_id, filename):
+        load_add = {"action": "add_to_playlist", "playlist_id": playlist_id, "filename": filename}
+        self.client_socket.sendall(json.dumps(load_add).encode())
+        reply = json.loads(self.client_socket.recv(1024).decode())
+        return reply.get("status") == "success", reply.get("message")
+
+    def view_playlist_tracks(self, session_id, playlist_id):
+        load_tracks = {"action": "view_playlist_tracks", "id": session_id, "playlist_id": playlist_id}
+        self.client_socket.sendall(json.dumps(load_tracks).encode())
+        reply = json.loads(self.client_socket.recv(1024).decode())
+        return reply.get("status") == "success", reply.get("songs", [])
