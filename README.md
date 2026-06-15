@@ -11,8 +11,8 @@ You must have the following installed on your machine:
 ### 2. Clone the Repository
 Open your terminal and pull down the code:
 ```bash
-git clone [https://github.com/YOUR_USERNAME/Delta-Music-Streamer.git](https://github.com/YOUR_USERNAME/Delta-Music-Streamer.git)
-cd Delta-Music-Streamer
+git clone [https://github.com/Jerry-J007/MUSIC_STREAMER.git](https://github.com/Jerry-J007/MUSIC_STREAMER.git)
+cd MUSIC_STREAMER
 ```
 
 ### 3. Install the following python libraries
